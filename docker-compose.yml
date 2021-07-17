@@ -1,0 +1,38 @@
+version: '3.4'
+
+services:
+    nginx:
+        # @see https://dockerfile.readthedocs.io/en/latest/content/DockerImages/dockerfiles/php-nginx-dev.html#customization
+        image: webdevops/php-nginx-dev:8.0
+        volumes:
+            - ./app:/app
+            - ./.docker/nginx/conf.d/default.conf:/opt/docker/etc/nginx/vhost.conf
+        working_dir: /app
+        environment:
+            # PHP config
+            # @see https://dockerfile.readthedocs.io/en/latest/content/DockerImages/dockerfiles/php-nginx-dev.html#environment-variables
+            PHP_DATE_TIMEZONE: "Europe/Paris"
+            PHP_DISPLAY_ERRORS: "on"
+            PHP_MAX_EXECUTION_TIME: 7200
+            PHP_OPCACHE_REVALIDATE_FREQ: 0
+            php.xdebug.var_display_max_depth: 10
+            php.xdebug.var_display_max_data: 2048
+        deploy:
+            labels:
+                - traefik.enable=true
+
+                - traefik.http.services.starter.loadbalancer.server.port=80
+
+                - traefik.http.routers.starter.rule=Host(`starter.local.barlito.fr`)
+                - traefik.http.routers.starter.entrypoints=http
+                #- traefik.http.routers.starter.middlewares=tls-redirectscheme
+
+                - traefik.http.routers.starter-secure.rule=Host(`starter.local.barlito.fr`)
+                - traefik.http.routers.starter-secure.entrypoints=https
+                - traefik.http.routers.starter-secure.tls=true
+        networks:
+            - traefik_traefik_proxy
+
+networks:
+    traefik_traefik_proxy:
+        external: true
