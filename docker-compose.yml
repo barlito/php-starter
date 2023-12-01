@@ -3,9 +3,10 @@ version: '3.4'
 services:
     nginx:
         # @see https://dockerfile.readthedocs.io/en/latest/content/DockerImages/dockerfiles/php-nginx-dev.html#customization
-        image: webdevops/php-nginx-dev:8.0
+        image: webdevops/php-nginx-dev:8.2
+        user: "1000:1000"
         volumes:
-            - ./app:/app
+            - ./:/app
             - ./.docker/nginx/conf.d/default.conf:/opt/docker/etc/nginx/vhost.conf
         working_dir: /app
         environment:
