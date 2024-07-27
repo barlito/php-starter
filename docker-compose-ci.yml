@@ -5,4 +5,5 @@ services:
             - "8081:80"
 
 networks:
-    traefik_traefik_proxy: ~
+    traefik_traefik_proxy:
+        external: false
