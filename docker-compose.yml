@@ -43,7 +43,7 @@ services:
 volumes:
     starter_caddy_data:
     starter_caddy_config:
-    starter_db_data:
+#    starter_db_data:
 
 networks:
     traefik_traefik_proxy:
