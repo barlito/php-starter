@@ -26,7 +26,7 @@ jobs:
         run: make package.barlito_utils.install
 
       - name: Check app works well
-        run: "curl -I http://localhost:8081/ | grep -q 'Server: nginx'"
+        run: "curl -I http://localhost:8081/ | grep -q 'Server: Caddy'"
 
       - name: Setup github token
         run: make composer.command args="config -g github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}"
