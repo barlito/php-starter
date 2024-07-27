@@ -1,6 +1,6 @@
 services:
     php:
-        image: php-starter-php
+        image: starter-php
         build:
             context: .
             dockerfile: .docker/Dockerfile
@@ -29,11 +29,24 @@ services:
                 - traefik.http.routers.starter-secure.tls=true
         networks:
             - traefik_traefik_proxy
+#            - starter_internal
+
+#    db:
+#        image: postgres:16
+#        environment:
+#            POSTGRES_PASSWORD: root
+#        volumes:
+#            - starter_db_data:/var/lib/postgresql/data:rw
+#        networks:
+#            - starter_internal
 
 volumes:
     starter_caddy_data:
     starter_caddy_config:
+    starter_db_data:
 
 networks:
     traefik_traefik_proxy:
         external: true
+#    starter_internal:
+#        driver: overlay
