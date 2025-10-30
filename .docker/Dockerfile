@@ -10,6 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #    supervisor \
 	&& rm -rf /var/lib/apt/lists/*
 
+# Create non-root user with configurable UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+RUN groupadd -g ${GROUP_ID} www && \
+    useradd -u ${USER_ID} -g www -m -s /bin/bash www && \
+    chown -R www:www /app /data /config
+
 # add additional extensions here:
 RUN install-php-extensions \
     @composer \
@@ -32,5 +40,8 @@ CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]
 FROM frankenphp_base AS frankenphp_dev
 
 RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
+
+# Switch to non-root user
+USER www
 
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile", "--watch" ]
