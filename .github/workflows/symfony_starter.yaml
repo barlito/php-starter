@@ -3,7 +3,7 @@ name: Starter workflow
 on: push
 
 concurrency:
-  group: environment-${{ github.ref }}
+  group: ${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -12,12 +12,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
 
+      - name: Setup castor
+        uses: castor-php/setup-castor@v0.1.0
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/files
+          key: composer-${{ hashFiles('**/composer.lock') }}
+
       - name: Deploy stack
-        run: make docker.deploy.ci
+        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make docker.deploy.ci
 
       - name: Install Symfony app
         run: make symfony.install
