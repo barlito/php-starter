@@ -1,0 +1,17 @@
+name: CI
+
+on: push
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  code-quality:
+    uses: ./.github/workflows/code-quality.yaml
+    secrets: inherit
+
+  test:
+    uses: ./.github/workflows/test.yaml
+    secrets: inherit

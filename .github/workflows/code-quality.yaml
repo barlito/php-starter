@@ -1,0 +1,40 @@
+name: Code Quality
+
+on:
+  workflow_call:
+
+jobs:
+
+  code_quality:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'true'
+
+      - name: Setup castor
+        uses: castor-php/setup-castor@v1.0.0
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/files
+          key: composer-${{ hashFiles('**/composer.lock') }}
+
+      - name: Deploy stack
+        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make deploy.ci github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run php cs fixer
+        run: make cs_fixer.dry_run
+
+      - name: Run phpcs
+        run: make phpcs
+
+      - name: Run phpmd
+        run: make phpmd
+
+      - name: Undeploy stack
+        if: always()
+        run: make docker.undeploy.ci
