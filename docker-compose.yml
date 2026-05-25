@@ -10,6 +10,7 @@ services:
                 GROUP_ID: ${GROUP_ID:-1000}
         environment:
             SERVER_NAME: ":80"
+            TZ: Europe/Paris
         volumes:
             - ./:/app
             - ./.docker/franken/Caddyfile:/etc/caddy/Caddyfile
@@ -32,24 +33,31 @@ services:
                 - traefik.http.routers.starter-secure.tls=true
         networks:
             - traefik_traefik_proxy
-#            - starter_internal
+            - starter_internal
 
-#    db:
-#        image: postgres:16
-#        environment:
-#            POSTGRES_PASSWORD: root
-#        volumes:
-#            - starter_db_data:/var/lib/postgresql/data:rw
-#        networks:
-#            - starter_internal
+    db:
+        image: postgres:18
+        environment:
+            POSTGRES_PASSWORD: root
+            TZ: Europe/Paris
+            PGTZ: Europe/Paris
+        volumes:
+            - starter_db_data:/var/lib/postgresql:rw
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - starter_internal
 
 volumes:
     starter_caddy_data:
     starter_caddy_config:
-#    starter_db_data:
+    starter_db_data:
 
 networks:
     traefik_traefik_proxy:
         external: true
-#    starter_internal:
-#        driver: overlay
+    starter_internal:
+        driver: overlay
