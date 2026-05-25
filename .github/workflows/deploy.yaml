@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      re-deploy:
+        description: "Full re-deploy (undeploy + redeploy) instead of rolling update"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_HOST: ssh://${{ vars.SERVER_USERNAME }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PORT }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'true'
+
+      - name: Setup castor
+        uses: castor-php/setup-castor@v1.0.0
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ vars.SERVER_PORT }} ${{ vars.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Re-Deploy Stack
+        if: inputs.re-deploy
+        run: |
+          make undeploy || true
+          TAG=$GITHUB_REF_NAME make deploy.prod
+
+      - name: Update main service
+        if: ${{ ! inputs.re-deploy }}
+        run: |
+          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:$GITHUB_REF_NAME starter_php"
+          castor barlito:castor:wait-php-container
+          make doctrine.migrate
+
+      - name: Update worker service
+        if: ${{ ! inputs.re-deploy }}
+        run: |
+          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:$GITHUB_REF_NAME starter_message_worker"
+
+      - name: Smoke test
+        run: make smoke.test
