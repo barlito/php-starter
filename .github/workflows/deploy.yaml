@@ -3,6 +3,10 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      tag:
+        description: "Image tag to deploy (defaults to current branch/tag)"
+        required: false
+        type: string
       re-deploy:
         description: "Full re-deploy (undeploy + redeploy) instead of rolling update"
         required: true
@@ -17,6 +21,7 @@ jobs:
       DOCKER_HOST: ssh://${{ vars.SERVER_USERNAME }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PORT }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       APP_SECRET: ${{ secrets.APP_SECRET }}
+      DEPLOY_TAG: ${{ inputs.tag || github.ref_name }}
 
     steps:
       - uses: actions/checkout@v6
@@ -43,19 +48,32 @@ jobs:
         if: inputs.re-deploy
         run: |
           make undeploy || true
-          TAG=$GITHUB_REF_NAME make deploy.prod
+          TAG=$DEPLOY_TAG make deploy.prod
 
-      - name: Update main service
+      - name: Backup database
         if: ${{ ! inputs.re-deploy }}
+        run: make db.backup
+
+      - name: Drain worker
+        if: ${{ ! inputs.re-deploy }}
+        run: docker service scale ${STACK_NAME:-starter}_message_worker=0 || true
+
+      - name: Update main service + migrate
+        if: ${{ ! inputs.re-deploy }}
+        env:
+          STACK_NAME: starter
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:$GITHUB_REF_NAME starter_php"
+          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:$DEPLOY_TAG ${STACK_NAME}_php"
           castor barlito:castor:wait-php-container
           make doctrine.migrate
 
-      - name: Update worker service
+      - name: Update & restart worker
         if: ${{ ! inputs.re-deploy }}
+        env:
+          STACK_NAME: starter
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:$GITHUB_REF_NAME starter_message_worker"
+          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:$DEPLOY_TAG ${STACK_NAME}_message_worker"
+          docker service scale ${STACK_NAME}_message_worker=1
 
       - name: Smoke test
         run: make smoke.test
