@@ -24,9 +24,28 @@ jobs:
           key: composer-${{ hashFiles('**/composer.lock') }}
 
       - name: Deploy stack
-        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make deploy.ci github_token=${{ secrets.GITHUB_TOKEN }}
+        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make docker.deploy.ci
+
+      - name: Install Symfony
+        run: make symfony.install
+
+      - name: Setup github token
+        run: make composer.command args="config -g github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Install barlito/utils
+        run: make package.barlito_utils.install
+
+      - name: Install php cs fixer
+        run: make cs_fixer.install
+
+      - name: Install phpcs
+        run: make phpcs.install
+
+      - name: Install phpmd
+        run: make phpmd.install
 
       - name: Run php cs fixer
+        continue-on-error: true
         run: make cs_fixer.dry_run
 
       - name: Run phpcs

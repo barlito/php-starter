@@ -24,7 +24,28 @@ jobs:
           key: composer-${{ hashFiles('**/composer.lock') }}
 
       - name: Deploy stack
-        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make deploy.ci github_token=${{ secrets.GITHUB_TOKEN }}
+        run: USER_ID=$(id -u) GROUP_ID=$(id -g) make docker.deploy.ci
+
+      - name: Install Symfony
+        run: make symfony.install
+
+      - name: Setup github token
+        run: make composer.command args="config -g github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Install barlito/utils
+        run: make package.barlito_utils.install
+
+      - name: Check app responds
+        run: "curl -I http://localhost:8081/ | grep -q 'Server: Caddy'"
+
+      - name: Install phpunit
+        run: make phpunit.install
+
+      - name: Install behat
+        run: make behat.install
+
+      - name: Init behat
+        run: make behat.init
 
       - name: Run phpunit
         run: make phpunit
