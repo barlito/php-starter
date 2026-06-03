@@ -35,11 +35,12 @@ services:
 #            - starter_internal
 
 #    db:
-#        image: postgres:16
+#        image: postgres:18-alpine
 #        environment:
 #            POSTGRES_PASSWORD: root
 #        volumes:
-#            - starter_db_data:/var/lib/postgresql/data:rw
+#            # Postgres 18+ stores data in /var/lib/postgresql (not /data anymore)
+#            - starter_db_data:/var/lib/postgresql:rw
 #        networks:
 #            - starter_internal
 

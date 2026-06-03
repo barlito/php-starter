@@ -19,7 +19,7 @@ A production-ready Symfony starter template featuring FrankenPHP, Docker Swarm d
 
 ## Features
 
-- **FrankenPHP** (PHP 8.3): Modern PHP application server built on Caddy
+- **FrankenPHP** (PHP 8.4): Modern PHP application server built on Caddy
 - **Docker Swarm**: Production-ready orchestration with Traefik integration
 - **Make + Castor**: Dual task automation system for flexibility
 - **Code Quality Tools**: PHP CS Fixer, PHPCS, PHPMD pre-configured
@@ -230,7 +230,7 @@ The project uses both **Make** and **Castor** for task automation:
 
 ### Docker Stack
 
-- **FrankenPHP**: Modern PHP 8.3 server based on Caddy with live reload in dev mode
+- **FrankenPHP**: Modern PHP 8.4 server based on Caddy with live reload in dev mode
 - **Docker Swarm**: Orchestration for development (uses `docker stack deploy`)
 - **Traefik Integration**: HTTP/HTTPS routing via external `traefik_traefik_proxy` network
 - **Volumes**: Persistent storage for Caddy data and configuration
