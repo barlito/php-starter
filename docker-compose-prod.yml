@@ -1,0 +1,88 @@
+services:
+    php:
+        image: ${DOCKER_IMAGE:-starter}:${TAG:-latest}
+        environment:
+            APP_ENV: prod
+            APP_SECRET: "${APP_SECRET}"
+            SERVER_NAME: ":80"
+            TZ: Europe/Paris
+            DATABASE_URL: "postgresql://starter:${DB_PASSWORD}@starter_db:5432/starter?serverVersion=18&charset=utf8"
+        deploy:
+            replicas: 1
+            update_config:
+                order: stop-first
+                parallelism: 1
+                monitor: 30s
+                failure_action: rollback
+                max_failure_ratio: 0
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            labels:
+                - traefik.enable=true
+
+                - traefik.http.services.starter.loadbalancer.server.port=80
+
+                - traefik.http.routers.starter.rule=Host(`starter.example.com`)
+                - traefik.http.routers.starter.entrypoints=http
+                - traefik.http.routers.starter.middlewares=tls-redirectscheme
+
+                - traefik.http.routers.starter-secure.rule=Host(`starter.example.com`)
+                - traefik.http.routers.starter-secure.entrypoints=https
+                - traefik.http.routers.starter-secure.tls=true
+                - traefik.http.routers.starter-secure.tls.certresolver=letsencrypt
+        networks:
+            - traefik_traefik_proxy
+            - starter_internal
+
+    message_worker:
+        image: ${DOCKER_IMAGE:-starter}-worker:${TAG:-latest}
+        environment:
+            APP_ENV: prod
+            APP_SECRET: "${APP_SECRET}"
+            TZ: Europe/Paris
+            DATABASE_URL: "postgresql://starter:${DB_PASSWORD}@starter_db:5432/starter?serverVersion=18&charset=utf8"
+        stop_grace_period: 60s
+        deploy:
+            replicas: 1
+            update_config:
+                order: stop-first
+                parallelism: 1
+                monitor: 30s
+                failure_action: rollback
+            resources:
+                limits:
+                    memory: 1G
+        networks:
+            - starter_internal
+
+    db:
+        image: postgres:18
+        environment:
+            POSTGRES_USER: starter
+            POSTGRES_PASSWORD: "${DB_PASSWORD}"
+            POSTGRES_DB: starter
+            TZ: Europe/Paris
+            PGTZ: Europe/Paris
+        volumes:
+            - starter_db_data:/var/lib/postgresql:rw
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U starter"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        deploy:
+            replicas: 1
+            update_config:
+                order: stop-first
+        networks:
+            - starter_internal
+
+volumes:
+    starter_db_data:
+
+networks:
+    traefik_traefik_proxy:
+        external: true
+    starter_internal:
+        driver: overlay
