@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: 'true'
 
@@ -25,7 +25,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.composer/files
           key: composer-${{ hashFiles('**/composer.lock') }}
@@ -49,6 +49,16 @@ jobs:
 
       - name: Run PHPUnit
         run: make phpunit
+
+      # Behat (functional tests). Drop these three steps if your project has no Behat suite.
+      - name: Install Behat
+        run: make behat.install
+
+      - name: Init Behat
+        run: make behat.init
+
+      - name: Run Behat
+        run: make behat
 
       - name: Undeploy stack
         if: always()
