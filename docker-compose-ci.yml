@@ -4,6 +4,11 @@ services:
         ports:
             - "8081:80"
 
+    db:
+        container_name: starter_db
+
 networks:
     traefik_traefik_proxy:
         external: false
+    starter_internal:
+        driver: bridge
