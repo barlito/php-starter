@@ -1,6 +1,6 @@
 # barlito/php-starter
 
-[![CI](https://github.com/barlito/php-starter/actions/workflows/entrypoint.yaml/badge.svg?branch=master)](https://github.com/barlito/php-starter/actions/workflows/entrypoint.yaml)
+[![CI](https://github.com/barlito/php-starter/actions/workflows/symfony_starter.yaml/badge.svg?branch=master)](https://github.com/barlito/php-starter/actions/workflows/symfony_starter.yaml)
 
 Symfony starter template with FrankenPHP, Docker Swarm, and a full CI/CD pipeline.
 
@@ -85,18 +85,21 @@ make npm.watch              # Watch mode
 
 ## CI/CD
 
-Workflows in `.github/workflows/`:
+Active workflows in `.github/workflows/`:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `entrypoint.yaml` | Push | Orchestrates quality + tests in parallel |
-| `code-quality.yaml` | Called | CS Fixer, PHPCS, PHPMD |
-| `test.yaml` | Called | PHPUnit, Behat |
+| `symfony_starter.yaml` | Push | Validates the starter itself (bootstrap + PHPUnit/Behat) |
 | `security.yaml` | Called + Weekly cron | Trivy image vulnerability scan |
 | `release.yaml` | GitHub Release | Build + push Docker images |
 | `deploy.yaml` | Manual | Rolling update or full re-deploy |
 | `rollback.yaml` | Manual | Rollback to tag + optional migration revert |
 | `dependabot-auto-merge.yaml` | PR | Auto-merge patch updates |
+
+Copy-paste examples for real projects live in [`.github/workflow-examples/`](.github/workflow-examples/)
+(they don't run on the starter): a reusable `entrypoint` that fans out to `test`
+(PHPUnit + Behat) and `code-quality` (php-cs-fixer / phpcs / phpmd). See that folder's
+README for details.
 
 ## Docker Targets
 
