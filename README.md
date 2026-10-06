@@ -108,6 +108,8 @@ README for details.
 - `php` updates are **start-first** with `failure_action: rollback`: the old task keeps serving until the new one
   passes its healthcheck (Caddy `:2019/metrics` only — never PHP/DB, a schema-dependent check would roll back every
   deploy carrying a migration). Databases and the worker stay stop-first.
+- Traefik routes through the Swarm VIP (`traefik.swarm.lbswarm=true`): without it, Traefik can keep the old task IP
+  for a few seconds during start-first (502s). Drop the label if Traefik-side balancing is needed (sticky sessions).
 - `docker service update` / `docker stack deploy` exit 0 even after Swarm rolled back: `make deploy.assert_image`
   is what fails the job.
 - Migrations run **after** the new code is up, and old/new code overlap for a few seconds: keep them
