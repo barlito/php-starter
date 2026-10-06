@@ -16,12 +16,15 @@ on:
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    # A crash-looping container must not keep the job spinning
+    timeout-minutes: 15
 
     env:
       DOCKER_HOST: ssh://${{ vars.SERVER_USERNAME }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PORT }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       APP_SECRET: ${{ secrets.APP_SECRET }}
       STACK_NAME: starter
+      DOCKER_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}
 
     steps:
       - uses: actions/checkout@v7
@@ -102,13 +105,16 @@ jobs:
 
       - name: Rollback main service
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:${{ inputs.tag }} ${STACK_NAME}_php"
-          castor barlito:castor:wait-php-container
+          make docker.service.update args="--image $DOCKER_IMAGE:${{ inputs.tag }} ${STACK_NAME}_php"
+          TAG=${{ inputs.tag }} make deploy.assert_image
 
       - name: Rollback & restart worker
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:${{ inputs.tag }} ${STACK_NAME}_message_worker"
+          make docker.service.update args="--image $DOCKER_IMAGE-worker:${{ inputs.tag }} ${STACK_NAME}_message_worker"
           docker service scale ${STACK_NAME}_message_worker=1
 
       - name: Smoke test
         run: make smoke.test
+
+      - name: Remove stopped containers
+        run: make deploy.prune
