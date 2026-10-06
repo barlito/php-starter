@@ -14,14 +14,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     procps \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Create non-root user with configurable UID/GID
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-
-RUN groupadd -g ${GROUP_ID} www && \
-    useradd -u ${USER_ID} -g www -m -s /bin/bash www && \
-    chown -R www:www /app /data /config
-
+# uid-independent layers first, so CI (runner uid) and local/prod (1000) share them
 # Extensions PHP
 RUN install-php-extensions \
     @composer \
@@ -32,11 +25,19 @@ RUN install-php-extensions \
 	pdo_pgsql \
     pcntl
 
-# Config PHP commune dev+prod
-COPY --link .docker/php/app.ini $PHP_INI_DIR/conf.d/
-
 ENV COMPOSER_HOME=/home/www/.composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Create non-root user with configurable UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+RUN groupadd -g ${GROUP_ID} www && \
+    useradd -u ${USER_ID} -g www -m -s /bin/bash www && \
+    chown -R www:www /app /data /config
+
+# Config PHP commune dev+prod
+COPY --link .docker/php/app.ini $PHP_INI_DIR/conf.d/
 
 HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]
