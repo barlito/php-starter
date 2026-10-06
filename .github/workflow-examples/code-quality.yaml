@@ -52,12 +52,13 @@ jobs:
         run: make composer.install
 
       # /app is bind-mounted: the tools write their caches on the runner, as the runner uid
+      # phpcs resolves the ruleset's cache arg relative to the ruleset (vendor/barlito/utils/config), not the cwd
       - name: Cache quality tools
         uses: actions/cache@v5
         with:
           path: |
             .php-cs-fixer.cache
-            .phpcs-cache
+            vendor/barlito/utils/config/.phpcs-cache
           key: quality-${{ hashFiles('composer.lock') }}-${{ github.sha }}
           restore-keys: |
             quality-${{ hashFiles('composer.lock') }}-
