@@ -1,11 +1,13 @@
-FROM dunglas/frankenphp:1-php8.3 AS frankenphp_upstream
+# Exact tag: a floating one changes the server under you (Dependabot proposes bumps)
+FROM dunglas/frankenphp:1.13.0-php8.3 AS frankenphp_upstream
 
 ### Base (extensions PHP, paquets système, user) ###
 FROM frankenphp_upstream AS frankenphp_base
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# upgrade: the upstream image lags behind Debian security fixes
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     vim \
 	acl \
     supervisor \
