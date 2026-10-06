@@ -10,6 +10,8 @@ jobs:
   init_symfony_starter:
 
     runs-on: ubuntu-latest
+    # A hung container must not hold the runner for 6 hours
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v7
@@ -19,11 +21,20 @@ jobs:
       - name: Setup castor
         uses: castor-php/setup-castor@v0.1.0
 
+      # COMPOSER_HOME is bind-mounted from ~/.composer; no lock exists before symfony.install, hence the sha key
       - name: Cache Composer Dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.composer/files
-          key: composer-${{ hashFiles('**/composer.lock') }}
+          path: ~/.composer/cache
+          key: composer-${{ github.sha }}
+          restore-keys: composer-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # exposes ACTIONS_RUNTIME_TOKEN / cache URLs to docker compose for the gha layer cache
+      - name: Expose GitHub runtime
+        uses: crazy-max/ghaction-github-runtime@v4
 
       - name: Deploy stack
         run: USER_ID=$(id -u) GROUP_ID=$(id -g) make docker.deploy.ci

@@ -40,4 +40,9 @@ submodule, so the workflows are project-agnostic (no stack name hardcoded).
 - `code-quality.yaml` skips the database migration (the linters don't need it).
 - The default `GITHUB_TOKEN` is used for Composer's GitHub OAuth to avoid API rate limits.
 - Behat is optional: drop the three `Behat` steps in `test.yaml` if your project has no functional suite.
+- **Caches.** The CI image layers go to the GitHub Actions cache (`cache_from` / `cache_to: type=gha`
+  in `docker-compose-ci.yml`): any workflow running `make docker.deploy.ci` needs the
+  `docker/setup-buildx-action` + `crazy-max/ghaction-github-runtime` steps first. Composer's cache
+  (`~/.composer/cache`, bind-mounted as `COMPOSER_HOME`) and the php-cs-fixer / phpcs caches are kept
+  with `actions/cache`.
 - Actions are pinned to `checkout@v6` / `cache@v5` / `setup-castor@v1.0.0`.
