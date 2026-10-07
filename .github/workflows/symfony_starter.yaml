@@ -23,7 +23,7 @@ jobs:
 
       # COMPOSER_HOME is bind-mounted from ~/.composer; no lock exists before symfony.install, hence the sha key
       - name: Cache Composer Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ github.sha }}
