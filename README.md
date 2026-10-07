@@ -44,7 +44,9 @@ App runs at the URL configured in your Traefik setup (default: `starter.local.ba
 ```bash
 make docker.deploy          # Deploy dev stack
 make docker.bash            # Shell into PHP container
-make deploy.prod            # Full prod deploy (backup → migrate → smoke test)
+make deploy.prod            # Full prod deploy (backup → rolling stack deploy → assert → migrate → smoke test → prune)
+make deploy.assert_image    # Fail unless <stack>_php runs $TAG, was not rolled back and is healthy
+make deploy.prune           # Remove the stack's stopped containers
 make undeploy               # Remove stack
 ```
 
@@ -92,7 +94,7 @@ Active workflows in `.github/workflows/`:
 | `symfony_starter.yaml` | Push | Validates the starter itself (bootstrap + PHPUnit/Behat) |
 | `security.yaml` | Called + Weekly cron | Trivy image vulnerability scan |
 | `release.yaml` | GitHub Release | Build + push Docker images |
-| `deploy.yaml` | Manual | Rolling update or full re-deploy |
+| `deploy.yaml` | Manual | Image-only rolling update, or full stack deploy (never `stack rm`) |
 | `rollback.yaml` | Manual | Rollback to tag + optional migration revert |
 | `dependabot-auto-merge.yaml` | PR | Auto-merge patch updates |
 
@@ -100,6 +102,20 @@ Copy-paste examples for real projects live in [`.github/workflow-examples/`](.gi
 (they don't run on the starter): a reusable `entrypoint` that fans out to `test`
 (PHPUnit + Behat) and `code-quality` (php-cs-fixer / phpcs / phpmd). See that folder's
 README for details.
+
+## Deployment safety
+
+- `php` updates are **start-first** with `failure_action: rollback`: the old task keeps serving until the new one
+  passes its healthcheck (Caddy `:2019/metrics` only — never PHP/DB, a schema-dependent check would roll back every
+  deploy carrying a migration). Databases and the worker stay stop-first.
+- Traefik routes through the Swarm VIP (`traefik.swarm.lbswarm=true`): without it, Traefik can keep the old task IP
+  for a few seconds during start-first (502s). Drop the label if Traefik-side balancing is needed (sticky sessions).
+- `docker service update` / `docker stack deploy` exit 0 even after Swarm rolled back: `make deploy.assert_image`
+  is what fails the job.
+- Migrations run **after** the new code is up, and old/new code overlap for a few seconds: keep them
+  backward-compatible (expand/contract).
+- The image-only path (`deploy.yaml` without `re-deploy`) does not apply compose changes: run a `re-deploy` after
+  changing `docker-compose-prod.yml`.
 
 ## Docker Targets
 

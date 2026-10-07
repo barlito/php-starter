@@ -1,25 +1,20 @@
-FROM dunglas/frankenphp:1-php8.3 AS frankenphp_upstream
+# Exact tag: a floating one changes the server under you (Dependabot proposes bumps)
+FROM dunglas/frankenphp:1.13.0-php8.3 AS frankenphp_upstream
 
 ### Base (extensions PHP, paquets système, user) ###
 FROM frankenphp_upstream AS frankenphp_base
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# upgrade: the upstream image lags behind Debian security fixes
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     vim \
 	acl \
     supervisor \
     procps \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Create non-root user with configurable UID/GID
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-
-RUN groupadd -g ${GROUP_ID} www && \
-    useradd -u ${USER_ID} -g www -m -s /bin/bash www && \
-    chown -R www:www /app /data /config
-
+# uid-independent layers first, so CI (runner uid) and local/prod (1000) share them
 # Extensions PHP
 RUN install-php-extensions \
     @composer \
@@ -30,11 +25,19 @@ RUN install-php-extensions \
 	pdo_pgsql \
     pcntl
 
-# Config PHP commune dev+prod
-COPY --link .docker/php/app.ini $PHP_INI_DIR/conf.d/
-
 ENV COMPOSER_HOME=/home/www/.composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Create non-root user with configurable UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+RUN groupadd -g ${GROUP_ID} www && \
+    useradd -u ${USER_ID} -g www -m -s /bin/bash www && \
+    chown -R www:www /app /data /config
+
+# Config PHP commune dev+prod
+COPY --link .docker/php/app.ini $PHP_INI_DIR/conf.d/
 
 HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]

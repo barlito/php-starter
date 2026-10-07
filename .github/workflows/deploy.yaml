@@ -8,7 +8,7 @@ on:
         required: false
         type: string
       re-deploy:
-        description: "Full re-deploy (undeploy + redeploy) instead of rolling update"
+        description: "Full stack deploy (applies all of docker-compose-prod.yml, rolling update with rollback) instead of the image-only update"
         required: true
         type: boolean
         default: false
@@ -16,12 +16,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # A crash-looping container must not keep the job spinning
+    timeout-minutes: 15
 
     env:
       DOCKER_HOST: ssh://${{ vars.SERVER_USERNAME }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PORT }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       APP_SECRET: ${{ secrets.APP_SECRET }}
       DEPLOY_TAG: ${{ inputs.tag || github.ref_name }}
+      # Read by docker-compose-prod.yml and by `make deploy.assert_image`
+      DOCKER_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}
 
     steps:
       - uses: actions/checkout@v7
@@ -44,11 +48,10 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
+      # No `stack rm`: deploy.prod rolls the existing stack (creates it on a first deploy)
       - name: Re-Deploy Stack
         if: inputs.re-deploy
-        run: |
-          make undeploy || true
-          TAG=$DEPLOY_TAG make deploy.prod
+        run: TAG=$DEPLOY_TAG make deploy.prod
 
       - name: Backup database
         if: ${{ ! inputs.re-deploy }}
@@ -63,8 +66,8 @@ jobs:
         env:
           STACK_NAME: starter
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:$DEPLOY_TAG ${STACK_NAME}_php"
-          castor barlito:castor:wait-php-container
+          make docker.service.update args="--image $DOCKER_IMAGE:$DEPLOY_TAG ${STACK_NAME}_php"
+          TAG=$DEPLOY_TAG make deploy.assert_image
           make doctrine.migrate
 
       - name: Update & restart worker
@@ -72,8 +75,13 @@ jobs:
         env:
           STACK_NAME: starter
         run: |
-          make docker.service.update args="--image ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:$DEPLOY_TAG ${STACK_NAME}_message_worker"
+          make docker.service.update args="--image $DOCKER_IMAGE-worker:$DEPLOY_TAG ${STACK_NAME}_message_worker"
           docker service scale ${STACK_NAME}_message_worker=1
 
       - name: Smoke test
+        if: ${{ ! inputs.re-deploy }}
         run: make smoke.test
+
+      - name: Remove stopped containers
+        if: ${{ ! inputs.re-deploy }}
+        run: make deploy.prune
