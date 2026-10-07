@@ -19,7 +19,7 @@ jobs:
           submodules: 'true'
 
       - name: Setup castor
-        uses: castor-php/setup-castor@v0.1.0
+        uses: castor-php/setup-castor@v1.1.0
 
       # COMPOSER_HOME is bind-mounted from ~/.composer; no lock exists before symfony.install, hence the sha key
       - name: Cache Composer Dependencies
