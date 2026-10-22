@@ -42,14 +42,15 @@ jobs:
       - name: Install Symfony app
         run: make symfony.install
 
+      # before any GitHub VCS install: unauthenticated, composer hits the shared-IP API rate limit and waits for a token on the TTY
+      - name: Setup github token
+        run: make composer.command args="config -g github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}"
+
       - name: Install barlito/utils
         run: make package.barlito_utils.install
 
       - name: Check app works well
         run: "curl -I http://localhost:8081/ | grep -qi 'Server: FrankenPHP'"
-
-      - name: Setup github token
-        run: make composer.command args="config -g github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install phpunit
         run: make phpunit.install
