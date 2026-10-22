@@ -1,5 +1,5 @@
-# Exact tag: a floating one changes the server under you (Dependabot proposes bumps)
-FROM dunglas/frankenphp:1.13.0-php8.3 AS frankenphp_upstream
+# Minor pinned (a new minor can break the server, e.g. Mercure 1.0 in 1.13), patches float to get PHP/FrankenPHP security fixes
+FROM dunglas/frankenphp:1.13-php8.5 AS frankenphp_upstream
 
 ### Base (extensions PHP, paquets système, user) ###
 FROM frankenphp_upstream AS frankenphp_base

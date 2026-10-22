@@ -6,7 +6,7 @@ Symfony starter template with FrankenPHP, Docker Swarm, and a full CI/CD pipelin
 
 ## Stack
 
-- **FrankenPHP** (PHP 8.3) — single-binary server with Caddy
+- **FrankenPHP** (PHP 8.5) — single-binary server with Caddy
 - **PostgreSQL 18** — with healthcheck
 - **Docker Swarm** — production orchestration with Traefik
 - **Supervisor** — async Messenger worker management

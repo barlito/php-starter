@@ -28,6 +28,10 @@ phpstan:
 phpstan.install:
 	docker exec -t $(app_container_id) bash -c "composer require --dev phpstan/phpstan phpstan/phpstan-symfony phpstan/phpstan-doctrine"
 
+# PHPMD: Kernel.php is framework boilerplate (Symfony 8.1's private getAllowedEnvs() is called by the framework, not by our code), excluded like in PHPStan
+phpmd:
+	docker exec -t $(app_container_id) vendor/bin/phpmd src/ ansi $(config_phpmd) --exclude src/Migrations/,src/Kernel.php,tests/
+
 # Aggregate quality check
 quality:
 	make cs_fixer.dry_run
