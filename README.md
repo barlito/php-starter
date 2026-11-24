@@ -95,7 +95,6 @@ part lives in the `Makefile` (stack, image and service names, production host) a
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `symfony_starter.yaml` | Push | Validates the starter itself (bootstrap + PHPUnit/Behat) |
-| `docker-check.yaml` | PR | Builds the prod targets and validates `docker-compose-prod.yml` |
 | `security.yaml` | Weekly cron | Trivy image scan (`image-scan`) |
 | `release.yaml` | GitHub Release | Build + push Docker images (`docker-release`) |
 | `deploy.yaml` | Manual, `--ref vX.Y.Z` | Image-only rolling update, or full stack deploy with `re-deploy` (`swarm-deploy`, never `stack rm`) |
@@ -104,7 +103,7 @@ part lives in the `Makefile` (stack, image and service names, production host) a
 
 Deploy from the release tag: `gh workflow run deploy.yaml --ref v1.2.3` (add `-f re-deploy=true` for a full deploy).
 
-A copy-paste CI workflow for real projects (`php-ci`) lives in [`.github/workflow-examples/`](.github/workflow-examples/)
+A copy-paste CI workflow for real projects (`php-ci` and `docker-check`, which need a `composer.json` and so cannot run on the starter) lives in [`.github/workflow-examples/`](.github/workflow-examples/)
 (it doesn't run on the starter).
 
 ## Deployment safety
