@@ -4,49 +4,14 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   release:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: 'true'
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      - name: Build & Push Main Image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: .docker/Dockerfile
-          target: frankenphp_prod
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.ref_name }}
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:latest
-          build-args: |
-            APP_VERSION=${{ github.ref_name }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:buildcache,mode=max
-
-      - name: Build & Push Worker Image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: .docker/Dockerfile
-          target: frankenphp_worker_prod
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:${{ github.ref_name }}
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}-worker:latest
-          build-args: |
-            APP_VERSION=${{ github.ref_name }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:buildcache
+    uses: barlito/ci/.github/workflows/docker-release.yaml@v1
+    with:
+      images: '[{"name":"starter","target":"frankenphp_prod"},{"name":"starter-worker","target":"frankenphp_worker_prod"}]'
+      dockerfile: .docker/Dockerfile
+    secrets: inherit

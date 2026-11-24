@@ -87,21 +87,25 @@ make npm.watch              # Watch mode
 
 ## CI/CD
 
-Active workflows in `.github/workflows/`:
+Active workflows in `.github/workflows/`. Release, deploy, rollback, scan and compose check are thin
+callers of the reusable workflows of [barlito/ci](https://github.com/barlito/ci) (`@v1`); the project-specific
+part lives in the `Makefile` (stack, image and service names, production host) and in the
+[`php-make-rules`](https://github.com/barlito/php-make-rules) production rules.
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `symfony_starter.yaml` | Push | Validates the starter itself (bootstrap + PHPUnit/Behat) |
-| `security.yaml` | Called + Weekly cron | Trivy image vulnerability scan |
-| `release.yaml` | GitHub Release | Build + push Docker images |
-| `deploy.yaml` | Manual | Image-only rolling update, or full stack deploy (never `stack rm`) |
-| `rollback.yaml` | Manual | Rollback to tag + optional migration revert |
+| `docker-check.yaml` | PR | Builds the prod targets and validates `docker-compose-prod.yml` |
+| `security.yaml` | Weekly cron | Trivy image scan (`image-scan`) |
+| `release.yaml` | GitHub Release | Build + push Docker images (`docker-release`) |
+| `deploy.yaml` | Manual, `--ref vX.Y.Z` | Image-only rolling update, or full stack deploy with `re-deploy` (`swarm-deploy`, never `stack rm`) |
+| `rollback.yaml` | Manual | Rollback to a tag, migrations reverted or database restored (`swarm-rollback`) |
 | `dependabot-auto-merge.yaml` | PR | Auto-merge patch updates |
 
-Copy-paste examples for real projects live in [`.github/workflow-examples/`](.github/workflow-examples/)
-(they don't run on the starter): a reusable `entrypoint` that fans out to `test`
-(PHPUnit + Behat) and `code-quality` (php-cs-fixer / phpcs / phpmd). See that folder's
-README for details.
+Deploy from the release tag: `gh workflow run deploy.yaml --ref v1.2.3` (add `-f re-deploy=true` for a full deploy).
+
+A copy-paste CI workflow for real projects (`php-ci`) lives in [`.github/workflow-examples/`](.github/workflow-examples/)
+(it doesn't run on the starter).
 
 ## Deployment safety
 
@@ -114,7 +118,7 @@ README for details.
   is what fails the job.
 - Migrations run **after** the new code is up, and old/new code overlap for a few seconds: keep them
   backward-compatible (expand/contract).
-- The image-only path (`deploy.yaml` without `re-deploy`) does not apply compose changes: run a `re-deploy` after
+- The image-only path (`deploy.yaml` without `re-deploy`, i.e. `make deploy.update`) does not apply compose changes: run a `re-deploy` after
   changing `docker-compose-prod.yml`.
 
 ## Docker Targets
@@ -149,28 +153,30 @@ make/                       # Git submodule (barlito/php-make-rules)
 
 ## Configuration
 
-Stack name is centralized in 3 files (`Makefile`, `castor.php`, `docker-compose.yml`).
-Update all at once:
+The stack name lives in the `Makefile` (`stack_name`, which also drives the image names, the DB user and name,
+the backup path...), `castor.php`, the compose files and the image names of `release.yaml`, `deploy.yaml` and
+`rollback.yaml`. Update all at once:
 
 ```bash
 castor barlito:castor:set-stack-name my_project
 ```
 
-## Secrets Required for Deploy
+Then set `prod_host` in the `Makefile` and the host rules in `docker-compose-prod.yml`.
 
-| Secret | Purpose |
-|--------|---------|
-| `SSH_PRIVATE_KEY` | SSH access to production server |
-| `DOCKER_HUB_USERNAME` | Docker Hub login |
-| `DOCKER_HUB_ACCESS_TOKEN` | Docker Hub token |
-| `DB_PASSWORD` | Production database password |
-| `APP_SECRET` | Symfony APP_SECRET |
+## Secrets and variables for deploy
 
-| Variable | Purpose |
-|----------|---------|
-| `SERVER_HOST` | Production server hostname |
-| `SERVER_PORT` | SSH port |
-| `SERVER_USERNAME` | SSH user |
+Set on the `production` environment of the repository (see [barlito/ci](https://github.com/barlito/ci#variables-and-secrets)):
+
+| Kind | Name | Purpose |
+|------|------|---------|
+| variable | `SERVER_HOST` | Production server hostname |
+| secret | `SERVER_USERNAME`, `SERVER_PORT` | SSH user and port |
+| secret | `SERVER_HOST_KEY` | `known_hosts` line of the server ed25519 key |
+| secret | `SSH_PRIVATE_KEY` | SSH access to production server |
+| secret | `DOCKER_HUB_USERNAME`, `DOCKER_HUB_READ_ONLY_ACCESS_TOKEN` | Docker Hub pull |
+| secret | `DB_PASSWORD`, `APP_SECRET` | Production database password, Symfony `APP_SECRET` (listed in `env-secrets`) |
+
+Repository level, for `release.yaml`: `DOCKER_HUB_USERNAME` and `DOCKER_HUB_READ_WRITE_DELETE_ACCESS_TOKEN`.
 
 ## Related
 

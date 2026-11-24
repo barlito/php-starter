@@ -1,48 +1,36 @@
-# Example CI workflows
+# Example CI workflow
 
-Ready-to-use GitHub Actions workflows for a project bootstrapped from this starter.
-They live here (and **not** in `.github/workflows/`) so they don't run on the starter
-repository itself — copy them into a real project to activate them.
+Ready-to-use GitHub Actions workflow for a project bootstrapped from this starter.
+It lives here (and **not** in `.github/workflows/`) so it doesn't run on the starter
+repository itself, which validates its own bootstrap in `symfony_starter.yaml`.
 
-## What they do
-
-| File | Purpose |
-| ---- | ------- |
-| `entrypoint.yaml` | Runs on every `push`; fans out to the two reusable workflows below. |
-| `test.yaml` | Boots the CI stack, installs dependencies, migrates the test DB, runs **PHPUnit** and **Behat**. |
-| `code-quality.yaml` | Boots the CI stack and runs **php-cs-fixer** (dry-run), **phpcs**, **phpmd**. |
-
-Everything goes through the `make` targets from the [`php-make-rules`](https://github.com/barlito/php-make-rules)
-submodule, so the workflows are project-agnostic (no stack name hardcoded).
+`ci.yaml` calls the reusable `php-ci` and `docker-check` workflows of
+[`barlito/ci`](https://github.com/barlito/ci): the CI stack is started with `make deploy.ci`,
+every check then every test target is run, and the stack is always removed.
+Everything goes through the `make` targets of the [`php-make-rules`](https://github.com/barlito/php-make-rules)
+submodule, so nothing project-specific is hardcoded in the workflow.
 
 ## How to use
 
-1. Copy the three `*.yaml` files into your project's `.github/workflows/`:
+1. Copy it into your project's `.github/workflows/`:
    ```bash
-   cp .github/workflow-examples/{entrypoint,test,code-quality}.yaml .github/workflows/
+   cp .github/workflow-examples/ci.yaml .github/workflows/
    ```
-2. Make sure the targets they call exist (they ship with `php-make-rules`):
-   `docker.deploy.ci`, `composer.install`, `doctrine.migrate.ci`, `phpunit`,
-   `behat.install`, `behat.init`, `behat`, `cs_fixer.dry_run`, `phpcs`, `phpmd`,
-   `docker.undeploy.ci`.
-3. Install the quality toolchain once (configs come from `barlito/utils`):
+2. Install the quality toolchain once (configs come from `barlito/utils`):
    ```bash
    make package.barlito_utils.install
    make cs_fixer.install
    make phpcs.install
    make phpmd.install
+   make phpstan.install
+   make phpunit.install
    ```
+   Drop `behat` from `tests` if your project has no functional suite; otherwise run
+   `make behat.install behat.init` once.
 
 ## Notes
 
-- **Docker Hub login is optional.** Set the `DOCKER_HUB_USERNAME` / `DOCKER_HUB_ACCESS_TOKEN`
-  repository secrets to avoid pull rate limits; the step is skipped when they're absent.
-- `code-quality.yaml` skips the database migration (the linters don't need it).
+- `DOCKER_HUB_USERNAME` / `DOCKER_HUB_READ_ONLY_ACCESS_TOKEN` are optional here: when set, the
+  workflow logs in to Docker Hub to avoid pull rate limits.
 - The default `GITHUB_TOKEN` is used for Composer's GitHub OAuth to avoid API rate limits.
-- Behat is optional: drop the three `Behat` steps in `test.yaml` if your project has no functional suite.
-- **Caches.** The CI image layers go to the GitHub Actions cache (`cache_from` / `cache_to: type=gha`
-  in `docker-compose-ci.yml`): any workflow running `make docker.deploy.ci` needs the
-  `docker/setup-buildx-action` + `crazy-max/ghaction-github-runtime` steps first. Composer's cache
-  (`~/.composer/cache`, bind-mounted as `COMPOSER_HOME`) and the php-cs-fixer / phpcs caches are kept
-  with `actions/cache`.
-- Actions are pinned to `checkout@v6` / `cache@v5` / `setup-castor@v1.0.0`.
+- `checks` and `tests` are lists of make targets: add your own (`rector`, `behat`...).
